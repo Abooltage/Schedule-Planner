@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Daily Schedule</title>
+<meta name="theme-color" content="#2F5D62" />
+<meta name="description" content="Your daily routine and tasks, time-blocked." />
+
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json" />
+<link rel="icon" href="./icon-192.png" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Schedule" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+// ---------- helpers ----------
+function todayKey(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function minutesOf(t) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+function fmtTime(t) {
+  const [h, m] = t.split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}
+function fmtDateHeader(d = new Date()) {
+  return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+}
+function uid() {
+  return Math.random().toString(36).slice(2, 10);
+}
+function loadJSON(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+function saveJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {}
+}
+
+// ---------- tiny inline icons (no external icon library needed) ----------
+const Icon = {
+  Plus: (p) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  ),
+  Trash: (p) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>
+  ),
+  Check: (p) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke={p.color||"currentColor"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+  ),
+  Clock: (p) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+  ),
+  List: (p) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+  ),
+  X: (p) => (
+    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+  ),
+};
+
+function NowMarker() {
+  return (
+    <div className="flex items-center gap-2 -ml-4 mb-3">
+      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#D9A441" }} />
+      <div className="flex-1 h-px" style={{ background: "#D9A441" }} />
+      <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: "#8A5F0E", background: "#F6E6C4" }}>now</span>
+    </div>
+  );
+}
+
+function DailySchedule() {
+  const [routine, setRoutine] = useState(() => loadJSON("routine", []));
+  const [tasks, setTasks] = useState(() => loadJSON(`day:${todayKey()}`, {}).tasks || []);
+  const [completed, setCompleted] = useState(() => loadJSON(`day:${todayKey()}`, {}).completed || {});
+  const [now, setNow] = useState(new Date());
+  const [showAddBlock, setShowAddBlock] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [newBlock, setNewBlock] = useState({ start: "07:00", end: "07:30", label: "" });
+  const [newTaskText, setNewTaskText] = useState("");
+
+  useEffect(() => {
+    const i = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(i);
+  }, []);
+
+  useEffect(() => { saveJSON("routine", routine); }, [routine]);
+  useEffect(() => { saveJSON(`day:${todayKey()}`, { tasks, completed }); }, [tasks, completed]);
+
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    }
+  }, []);
+
+  const sortedRoutine = [...routine].sort((a, b) => minutesOf(a.start) - minutesOf(b.start));
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const dayProgress = Math.round((nowMin / (24 * 60)) * 100);
+
+  const doneBlocks = sortedRoutine.filter((b) => completed[b.id]).length;
+  const totalItems = sortedRoutine.length + tasks.length;
+  const doneItems = doneBlocks + tasks.filter((t) => t.done).length;
+  const completionPct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+
+  function toggleBlock(id) { setCompleted((c) => ({ ...c, [id]: !c[id] })); }
+  function addBlock() {
+    if (!newBlock.label.trim()) return;
+    setRoutine((r) => [...r, { id: uid(), ...newBlock, label: newBlock.label.trim() }]);
+    setNewBlock({ start: "07:00", end: "07:30", label: "" });
+    setShowAddBlock(false);
+  }
+  function removeBlock(id) { setRoutine((r) => r.filter((b) => b.id !== id)); }
+  function addTask() {
+    if (!newTaskText.trim()) return;
+    setTasks((t) => [...t, { id: uid(), text: newTaskText.trim(), done: false }]);
+    setNewTaskText("");
+    setShowAddTask(false);
+  }
+  function toggleTask(id) { setTasks((t) => t.map((x) => (x.id === id ? { ...x, done: !x.done } : x))); }
+  function removeTask(id) { setTasks((t) => t.filter((x) => x.id !== id)); }
+
+  let nowInsertIndex = sortedRoutine.findIndex((b) => minutesOf(b.start) > nowMin);
+  if (nowInsertIndex === -1) nowInsertIndex = sortedRoutine.length;
+
+  return (
+    <div className="min-h-screen w-full" style={{ background: "#FAF9F5" }}>
+      <div className="max-w-md mx-auto px-5 pt-8 pb-24">
+        <div className="mb-6">
+          <p className="text-xs font-mono tracking-widest uppercase mb-1" style={{ color: "#2F5D62" }}>{fmtDateHeader(now)}</p>
+          <h1 className="text-2xl font-semibold" style={{ color: "#23262B" }}>Today's plan</h1>
+        </div>
+
+        <div className="mb-8">
+          <div className="flex items-center justify-between text-xs font-mono mb-1.5" style={{ color: "#6B7280" }}>
+            <span>Day progress · {dayProgress}%</span>
+            <span>{completionPct}% done</span>
+          </div>
+          <div className="h-1.5 rounded-full w-full overflow-hidden" style={{ background: "#E7E3DA" }}>
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${dayProgress}%`, background: "#D9A441" }} />
+          </div>
+        </div>
+
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span style={{ color: "#2F5D62" }}><Icon.Clock /></span>
+            <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "#23262B" }}>Routine</h2>
+          </div>
+          <button onClick={() => setShowAddBlock((s) => !s)} className="text-xs font-medium flex items-center gap-1 px-2 py-1 rounded-md" style={{ color: "#2F5D62", background: "#EAF0EF" }}>
+            <Icon.Plus size={13} /> Add
+          </button>
+        </div>
+
+        {showAddBlock && (
+          <div className="mb-4 p-3 rounded-lg border" style={{ borderColor: "#E7E3DA", background: "white" }}>
+            <div className="flex gap-2 mb-2">
+              <input type="time" value={newBlock.start} onChange={(e) => setNewBlock((b) => ({ ...b, start: e.target.value }))} className="flex-1 text-sm border rounded-md px-2 py-1.5 font-mono" style={{ borderColor: "#E7E3DA" }} />
+              <input type="time" value={newBlock.end} onChange={(e) => setNewBlock((b) => ({ ...b, end: e.target.value }))} className="flex-1 text-sm border rounded-md px-2 py-1.5 font-mono" style={{ borderColor: "#E7E3DA" }} />
+            </div>
+            <input type="text" placeholder="What happens then?" value={newBlock.label} onChange={(e) => setNewBlock((b) => ({ ...b, label: e.target.value }))} className="w-full text-sm border rounded-md px-2 py-1.5 mb-2" style={{ borderColor: "#E7E3DA" }} />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowAddBlock(false)} className="text-xs px-3 py-1.5 text-gray-500">Cancel</button>
+              <button onClick={addBlock} className="text-xs px-3 py-1.5 rounded-md text-white font-medium" style={{ background: "#2F5D62" }}>Save block</button>
+            </div>
+          </div>
+        )}
+
+        <div className="relative pl-4 mb-8">
+          <div className="absolute left-[5px] top-1 bottom-1 w-px" style={{ background: "#D8D2C4" }} />
+          {sortedRoutine.length === 0 && <p className="text-sm py-3" style={{ color: "#9C9686" }}>No routine yet — add the times that anchor your day.</p>}
+          {sortedRoutine.map((b, i) => (
+            <div key={b.id}>
+              {i === nowInsertIndex && <NowMarker />}
+              <div className="relative flex items-start gap-3 mb-3 group">
+                <span className="absolute -left-4 top-1.5 w-2.5 h-2.5 rounded-full border-2" style={{ borderColor: completed[b.id] ? "#2F5D62" : "#D8D2C4", background: completed[b.id] ? "#2F5D62" : "#FAF9F5" }} />
+                <button onClick={() => toggleBlock(b.id)} className="flex-1 flex items-center justify-between gap-2 p-2.5 rounded-lg border text-left" style={{ borderColor: "#E7E3DA", background: completed[b.id] ? "#F1EFE8" : "white" }}>
+                  <div>
+                    <span className="block text-[11px] font-mono mb-0.5" style={{ color: "#2F5D62" }}>{fmtTime(b.start)} – {fmtTime(b.end)}</span>
+                    <span className="text-sm" style={{ color: completed[b.id] ? "#9C9686" : "#23262B", textDecoration: completed[b.id] ? "line-through" : "none" }}>{b.label}</span>
+                  </div>
+                  {completed[b.id] && <span style={{ color: "#2F5D62" }}><Icon.Check size={16} /></span>}
+                </button>
+                <button onClick={() => removeBlock(b.id)} className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-300 hover:text-red-400 transition-opacity">
+                  <Icon.Trash />
+                </button>
+              </div>
+            </div>
+          ))}
+          {nowInsertIndex === sortedRoutine.length && <NowMarker />}
+        </div>
+
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <span style={{ color: "#2F5D62" }}><Icon.List /></span>
+            <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "#23262B" }}>Today's tasks</h2>
+          </div>
+          <button onClick={() => setShowAddTask((s) => !s)} className="text-xs font-medium flex items-center gap-1 px-2 py-1 rounded-md" style={{ color: "#2F5D62", background: "#EAF0EF" }}>
+            <Icon.Plus size={13} /> Add
+          </button>
+        </div>
+
+        {showAddTask && (
+          <div className="mb-3 flex gap-2">
+            <input autoFocus type="text" placeholder="One-off thing to do today" value={newTaskText} onChange={(e) => setNewTaskText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addTask()} className="flex-1 text-sm border rounded-md px-2 py-1.5" style={{ borderColor: "#E7E3DA" }} />
+            <button onClick={addTask} className="px-3 rounded-md text-white text-xs font-medium" style={{ background: "#2F5D62" }}>Add</button>
+            <button onClick={() => setShowAddTask(false)} className="px-2 text-gray-400"><Icon.X size={16} /></button>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          {tasks.length === 0 && <p className="text-sm py-2" style={{ color: "#9C9686" }}>Nothing here yet. Add tasks that don't need a fixed time.</p>}
+          {tasks.map((t) => (
+            <div key={t.id} className="flex items-center gap-2.5 p-2.5 rounded-lg border group" style={{ borderColor: "#E7E3DA", background: t.done ? "#F1EFE8" : "white" }}>
+              <button onClick={() => toggleTask(t.id)} className="w-4 h-4 rounded border flex items-center justify-center shrink-0" style={{ borderColor: t.done ? "#2F5D62" : "#D8D2C4", background: t.done ? "#2F5D62" : "transparent" }}>
+                {t.done && <Icon.Check size={11} color="white" />}
+              </button>
+              <span className="text-sm flex-1" style={{ color: t.done ? "#9C9686" : "#23262B", textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
+              <button onClick={() => removeTask(t.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-opacity"><Icon.Trash /></button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<DailySchedule />);
+</script>
+</body>
+</html>
