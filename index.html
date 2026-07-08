@@ -7,7 +7,6 @@
 <meta name="theme-color" content="#2F5D62" />
 <meta name="description" content="Your daily routine and tasks, time-blocked." />
 
-<!-- PWA -->
 <link rel="manifest" href="./manifest.json" />
 <link rel="icon" href="./icon-192.png" />
 <link rel="apple-touch-icon" href="./icon-192.png" />
@@ -15,244 +14,305 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Schedule" />
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-
 <style>
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-  input[type="time"]::-webkit-calendar-picker-indicator { opacity: 0.6; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #FAF9F5;
+    color: #23262B;
+  }
+  .wrap { max-width: 440px; margin: 0 auto; padding: 32px 20px 96px; }
+  .eyebrow { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #2F5D62; margin: 0 0 4px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 24px; }
+  .progress-row { display: flex; justify-content: space-between; font-family: ui-monospace, monospace; font-size: 12px; color: #6B7280; margin-bottom: 6px; }
+  .progress-track { height: 6px; border-radius: 999px; background: #E7E3DA; overflow: hidden; margin-bottom: 32px; }
+  .progress-fill { height: 100%; background: #D9A441; border-radius: 999px; transition: width .4s; }
+  .section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .section-title { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+  .section-title svg { color: #2F5D62; }
+  .add-btn { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; color: #2F5D62; background: #EAF0EF; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; }
+  .empty { font-size: 14px; color: #9C9686; padding: 8px 0 12px; margin: 0; }
+  .form-card { padding: 12px; border: 1px solid #E7E3DA; border-radius: 10px; background: white; margin-bottom: 16px; }
+  .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+  input[type="time"], input[type="text"] { font-size: 14px; border: 1px solid #E7E3DA; border-radius: 6px; padding: 7px 9px; width: 100%; font-family: inherit; background: white; color: #23262B; }
+  input[type="time"] { font-family: ui-monospace, monospace; }
+  .form-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-ghost { background: none; border: none; font-size: 12px; color: #6B7280; padding: 6px 10px; cursor: pointer; }
+  .btn-primary { background: #2F5D62; color: white; border: none; font-size: 12px; font-weight: 500; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+  .timeline { position: relative; padding-left: 16px; margin-bottom: 32px; }
+  .rail { position: absolute; left: 5px; top: 4px; bottom: 4px; width: 1px; background: #D8D2C4; }
+  .block-row { position: relative; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .dot { position: absolute; left: -16px; top: 6px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #D8D2C4; background: #FAF9F5; }
+  .dot.done { border-color: #2F5D62; background: #2F5D62; }
+  .block-card { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px; border-radius: 10px; border: 1px solid #E7E3DA; background: white; text-align: left; cursor: pointer; }
+  .block-card.done { background: #F1EFE8; }
+  .block-time { display: block; font-family: ui-monospace, monospace; font-size: 11px; color: #2F5D62; margin-bottom: 2px; }
+  .block-label { font-size: 14px; }
+  .block-label.done { color: #9C9686; text-decoration: line-through; }
+  .del-btn { background: none; border: none; color: #D6D0C4; padding: 6px; cursor: pointer; flex-shrink: 0; }
+  .del-btn:hover { color: #E0827A; }
+  .now-marker { display: flex; align-items: center; gap: 8px; margin: 0 0 12px -16px; }
+  .now-dot { width: 10px; height: 10px; border-radius: 50%; background: #D9A441; flex-shrink: 0; }
+  .now-line { flex: 1; height: 1px; background: #D9A441; }
+  .now-label { font-family: ui-monospace, monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #8A5F0E; background: #F6E6C4; padding: 2px 6px; border-radius: 4px; }
+  .task-row { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; border: 1px solid #E7E3DA; background: white; margin-bottom: 8px; }
+  .task-row.done { background: #F1EFE8; }
+  .checkbox { width: 16px; height: 16px; border-radius: 4px; border: 1px solid #D8D2C4; background: transparent; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .checkbox.done { border-color: #2F5D62; background: #2F5D62; }
+  .task-text { font-size: 14px; flex: 1; }
+  .task-text.done { color: #9C9686; text-decoration: line-through; }
+  .task-add-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .task-add-row input { flex: 1; }
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div class="wrap">
+  <p class="eyebrow" id="dateLabel"></p>
+  <h1>Today's plan</h1>
 
-<script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef } = React;
+  <div class="progress-row"><span id="dayProgLabel"></span><span id="doneProgLabel"></span></div>
+  <div class="progress-track"><div class="progress-fill" id="dayProgFill"></div></div>
 
-// ---------- helpers ----------
-function todayKey(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-function minutesOf(t) {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-function fmtTime(t) {
-  const [h, m] = t.split(":").map(Number);
-  const period = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
-}
-function fmtDateHeader(d = new Date()) {
-  return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
-}
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
+  <div class="section-head">
+    <div class="section-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      Routine
+    </div>
+    <button class="add-btn" id="toggleAddBlock">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Add
+    </button>
+  </div>
+
+  <div class="form-card" id="addBlockForm" style="display:none">
+    <div class="form-row">
+      <input type="time" id="blockStart" value="07:00" />
+      <input type="time" id="blockEnd" value="07:30" />
+    </div>
+    <input type="text" id="blockLabel" placeholder="What happens then?" style="margin-bottom:8px" />
+    <div class="form-actions">
+      <button class="btn-ghost" id="cancelBlock">Cancel</button>
+      <button class="btn-primary" id="saveBlock">Save block</button>
+    </div>
+  </div>
+
+  <div class="timeline" id="timeline"></div>
+
+  <div class="section-head">
+    <div class="section-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
+      Today's tasks
+    </div>
+    <button class="add-btn" id="toggleAddTask">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Add
+    </button>
+  </div>
+
+  <div class="task-add-row" id="addTaskForm" style="display:none">
+    <input type="text" id="taskText" placeholder="One-off thing to do today" />
+    <button class="btn-primary" id="saveTask">Add</button>
+  </div>
+
+  <div id="taskList"></div>
+</div>
+
+<script>
+// ---------- storage helpers ----------
+function todayKey(d) {
+  d = d || new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 function loadJSON(key, fallback) {
   try {
-    const v = localStorage.getItem(key);
+    var v = localStorage.getItem(key);
     return v ? JSON.parse(v) : fallback;
-  } catch (e) {
-    return fallback;
-  }
+  } catch (e) { return fallback; }
 }
 function saveJSON(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {}
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+}
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function minutesOf(t) { var p = t.split(":").map(Number); return p[0] * 60 + p[1]; }
+function fmtTime(t) {
+  var p = t.split(":").map(Number), h = p[0], m = p[1];
+  var period = h >= 12 ? "PM" : "AM";
+  var h12 = h % 12 === 0 ? 12 : h % 12;
+  return h12 + ":" + String(m).padStart(2, "0") + " " + period;
 }
 
-// ---------- tiny inline icons (no external icon library needed) ----------
-const Icon = {
-  Plus: (p) => (
-    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
-  ),
-  Trash: (p) => (
-    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>
-  ),
-  Check: (p) => (
-    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke={p.color||"currentColor"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-  ),
-  Clock: (p) => (
-    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-  ),
-  List: (p) => (
-    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
-  ),
-  X: (p) => (
-    <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-  ),
-};
+// ---------- state ----------
+var routine = loadJSON("routine", []);
+var dayData = loadJSON("day:" + todayKey(), { tasks: [], completed: {} });
+var tasks = dayData.tasks || [];
+var completed = dayData.completed || {};
 
-function NowMarker() {
-  return (
-    <div className="flex items-center gap-2 -ml-4 mb-3">
-      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "#D9A441" }} />
-      <div className="flex-1 h-px" style={{ background: "#D9A441" }} />
-      <span className="text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ color: "#8A5F0E", background: "#F6E6C4" }}>now</span>
-    </div>
-  );
+function persist() {
+  saveJSON("routine", routine);
+  saveJSON("day:" + todayKey(), { tasks: tasks, completed: completed });
 }
 
-function DailySchedule() {
-  const [routine, setRoutine] = useState(() => loadJSON("routine", []));
-  const [tasks, setTasks] = useState(() => loadJSON(`day:${todayKey()}`, {}).tasks || []);
-  const [completed, setCompleted] = useState(() => loadJSON(`day:${todayKey()}`, {}).completed || {});
-  const [now, setNow] = useState(new Date());
-  const [showAddBlock, setShowAddBlock] = useState(false);
-  const [showAddTask, setShowAddTask] = useState(false);
-  const [newBlock, setNewBlock] = useState({ start: "07:00", end: "07:30", label: "" });
-  const [newTaskText, setNewTaskText] = useState("");
+// ---------- render ----------
+var checkSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2F5D62" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+var checkWhiteSVG = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+var trashSVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6h16Z"/></svg>';
 
-  useEffect(() => {
-    const i = setInterval(() => setNow(new Date()), 30000);
-    return () => clearInterval(i);
-  }, []);
+function render() {
+  var now = new Date();
+  document.getElementById("dateLabel").textContent = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
-  useEffect(() => { saveJSON("routine", routine); }, [routine]);
-  useEffect(() => { saveJSON(`day:${todayKey()}`, { tasks, completed }); }, [tasks, completed]);
+  var nowMin = now.getHours() * 60 + now.getMinutes();
+  var dayProgress = Math.round((nowMin / (24 * 60)) * 100);
+  document.getElementById("dayProgLabel").textContent = "Day progress · " + dayProgress + "%";
+  document.getElementById("dayProgFill").style.width = dayProgress + "%";
 
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-    }
-  }, []);
+  var sorted = routine.slice().sort(function (a, b) { return minutesOf(a.start) - minutesOf(b.start); });
+  var doneBlocks = sorted.filter(function (b) { return completed[b.id]; }).length;
+  var totalItems = sorted.length + tasks.length;
+  var doneItems = doneBlocks + tasks.filter(function (t) { return t.done; }).length;
+  var completionPct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+  document.getElementById("doneProgLabel").textContent = completionPct + "% done";
 
-  const sortedRoutine = [...routine].sort((a, b) => minutesOf(a.start) - minutesOf(b.start));
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const dayProgress = Math.round((nowMin / (24 * 60)) * 100);
+  var nowInsertIndex = sorted.findIndex(function (b) { return minutesOf(b.start) > nowMin; });
+  if (nowInsertIndex === -1) nowInsertIndex = sorted.length;
 
-  const doneBlocks = sortedRoutine.filter((b) => completed[b.id]).length;
-  const totalItems = sortedRoutine.length + tasks.length;
-  const doneItems = doneBlocks + tasks.filter((t) => t.done).length;
-  const completionPct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+  var tl = document.getElementById("timeline");
+  tl.innerHTML = "";
+  var railDiv = document.createElement("div");
+  railDiv.className = "rail";
+  tl.appendChild(railDiv);
 
-  function toggleBlock(id) { setCompleted((c) => ({ ...c, [id]: !c[id] })); }
-  function addBlock() {
-    if (!newBlock.label.trim()) return;
-    setRoutine((r) => [...r, { id: uid(), ...newBlock, label: newBlock.label.trim() }]);
-    setNewBlock({ start: "07:00", end: "07:30", label: "" });
-    setShowAddBlock(false);
+  if (sorted.length === 0) {
+    var p = document.createElement("p");
+    p.className = "empty";
+    p.textContent = "No routine yet — add the times that anchor your day.";
+    tl.appendChild(p);
   }
-  function removeBlock(id) { setRoutine((r) => r.filter((b) => b.id !== id)); }
-  function addTask() {
-    if (!newTaskText.trim()) return;
-    setTasks((t) => [...t, { id: uid(), text: newTaskText.trim(), done: false }]);
-    setNewTaskText("");
-    setShowAddTask(false);
+
+  function nowMarkerEl() {
+    var d = document.createElement("div");
+    d.className = "now-marker";
+    d.innerHTML = '<span class="now-dot"></span><span class="now-line"></span><span class="now-label">now</span>';
+    return d;
   }
-  function toggleTask(id) { setTasks((t) => t.map((x) => (x.id === id ? { ...x, done: !x.done } : x))); }
-  function removeTask(id) { setTasks((t) => t.filter((x) => x.id !== id)); }
 
-  let nowInsertIndex = sortedRoutine.findIndex((b) => minutesOf(b.start) > nowMin);
-  if (nowInsertIndex === -1) nowInsertIndex = sortedRoutine.length;
+  sorted.forEach(function (b, i) {
+    if (i === nowInsertIndex) tl.appendChild(nowMarkerEl());
+    var row = document.createElement("div");
+    row.className = "block-row";
+    var isDone = !!completed[b.id];
+    row.innerHTML =
+      '<span class="dot' + (isDone ? " done" : "") + '"></span>' +
+      '<button class="block-card' + (isDone ? " done" : "") + '" data-id="' + b.id + '">' +
+        '<div><span class="block-time">' + fmtTime(b.start) + " – " + fmtTime(b.end) + '</span>' +
+        '<span class="block-label' + (isDone ? " done" : "") + '">' + escapeHTML(b.label) + '</span></div>' +
+        (isDone ? checkSVG : "") +
+      '</button>' +
+      '<button class="del-btn" data-del="' + b.id + '">' + trashSVG + '</button>';
+    tl.appendChild(row);
+  });
+  if (nowInsertIndex === sorted.length) tl.appendChild(nowMarkerEl());
 
-  return (
-    <div className="min-h-screen w-full" style={{ background: "#FAF9F5" }}>
-      <div className="max-w-md mx-auto px-5 pt-8 pb-24">
-        <div className="mb-6">
-          <p className="text-xs font-mono tracking-widest uppercase mb-1" style={{ color: "#2F5D62" }}>{fmtDateHeader(now)}</p>
-          <h1 className="text-2xl font-semibold" style={{ color: "#23262B" }}>Today's plan</h1>
-        </div>
+  tl.querySelectorAll("[data-id]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var id = el.getAttribute("data-id");
+      completed[id] = !completed[id];
+      persist(); render();
+    });
+  });
+  tl.querySelectorAll("[data-del]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var id = el.getAttribute("data-del");
+      routine = routine.filter(function (b) { return b.id !== id; });
+      persist(); render();
+    });
+  });
 
-        <div className="mb-8">
-          <div className="flex items-center justify-between text-xs font-mono mb-1.5" style={{ color: "#6B7280" }}>
-            <span>Day progress · {dayProgress}%</span>
-            <span>{completionPct}% done</span>
-          </div>
-          <div className="h-1.5 rounded-full w-full overflow-hidden" style={{ background: "#E7E3DA" }}>
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${dayProgress}%`, background: "#D9A441" }} />
-          </div>
-        </div>
-
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span style={{ color: "#2F5D62" }}><Icon.Clock /></span>
-            <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "#23262B" }}>Routine</h2>
-          </div>
-          <button onClick={() => setShowAddBlock((s) => !s)} className="text-xs font-medium flex items-center gap-1 px-2 py-1 rounded-md" style={{ color: "#2F5D62", background: "#EAF0EF" }}>
-            <Icon.Plus size={13} /> Add
-          </button>
-        </div>
-
-        {showAddBlock && (
-          <div className="mb-4 p-3 rounded-lg border" style={{ borderColor: "#E7E3DA", background: "white" }}>
-            <div className="flex gap-2 mb-2">
-              <input type="time" value={newBlock.start} onChange={(e) => setNewBlock((b) => ({ ...b, start: e.target.value }))} className="flex-1 text-sm border rounded-md px-2 py-1.5 font-mono" style={{ borderColor: "#E7E3DA" }} />
-              <input type="time" value={newBlock.end} onChange={(e) => setNewBlock((b) => ({ ...b, end: e.target.value }))} className="flex-1 text-sm border rounded-md px-2 py-1.5 font-mono" style={{ borderColor: "#E7E3DA" }} />
-            </div>
-            <input type="text" placeholder="What happens then?" value={newBlock.label} onChange={(e) => setNewBlock((b) => ({ ...b, label: e.target.value }))} className="w-full text-sm border rounded-md px-2 py-1.5 mb-2" style={{ borderColor: "#E7E3DA" }} />
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowAddBlock(false)} className="text-xs px-3 py-1.5 text-gray-500">Cancel</button>
-              <button onClick={addBlock} className="text-xs px-3 py-1.5 rounded-md text-white font-medium" style={{ background: "#2F5D62" }}>Save block</button>
-            </div>
-          </div>
-        )}
-
-        <div className="relative pl-4 mb-8">
-          <div className="absolute left-[5px] top-1 bottom-1 w-px" style={{ background: "#D8D2C4" }} />
-          {sortedRoutine.length === 0 && <p className="text-sm py-3" style={{ color: "#9C9686" }}>No routine yet — add the times that anchor your day.</p>}
-          {sortedRoutine.map((b, i) => (
-            <div key={b.id}>
-              {i === nowInsertIndex && <NowMarker />}
-              <div className="relative flex items-start gap-3 mb-3 group">
-                <span className="absolute -left-4 top-1.5 w-2.5 h-2.5 rounded-full border-2" style={{ borderColor: completed[b.id] ? "#2F5D62" : "#D8D2C4", background: completed[b.id] ? "#2F5D62" : "#FAF9F5" }} />
-                <button onClick={() => toggleBlock(b.id)} className="flex-1 flex items-center justify-between gap-2 p-2.5 rounded-lg border text-left" style={{ borderColor: "#E7E3DA", background: completed[b.id] ? "#F1EFE8" : "white" }}>
-                  <div>
-                    <span className="block text-[11px] font-mono mb-0.5" style={{ color: "#2F5D62" }}>{fmtTime(b.start)} – {fmtTime(b.end)}</span>
-                    <span className="text-sm" style={{ color: completed[b.id] ? "#9C9686" : "#23262B", textDecoration: completed[b.id] ? "line-through" : "none" }}>{b.label}</span>
-                  </div>
-                  {completed[b.id] && <span style={{ color: "#2F5D62" }}><Icon.Check size={16} /></span>}
-                </button>
-                <button onClick={() => removeBlock(b.id)} className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-300 hover:text-red-400 transition-opacity">
-                  <Icon.Trash />
-                </button>
-              </div>
-            </div>
-          ))}
-          {nowInsertIndex === sortedRoutine.length && <NowMarker />}
-        </div>
-
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span style={{ color: "#2F5D62" }}><Icon.List /></span>
-            <h2 className="text-sm font-semibold uppercase tracking-wide" style={{ color: "#23262B" }}>Today's tasks</h2>
-          </div>
-          <button onClick={() => setShowAddTask((s) => !s)} className="text-xs font-medium flex items-center gap-1 px-2 py-1 rounded-md" style={{ color: "#2F5D62", background: "#EAF0EF" }}>
-            <Icon.Plus size={13} /> Add
-          </button>
-        </div>
-
-        {showAddTask && (
-          <div className="mb-3 flex gap-2">
-            <input autoFocus type="text" placeholder="One-off thing to do today" value={newTaskText} onChange={(e) => setNewTaskText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addTask()} className="flex-1 text-sm border rounded-md px-2 py-1.5" style={{ borderColor: "#E7E3DA" }} />
-            <button onClick={addTask} className="px-3 rounded-md text-white text-xs font-medium" style={{ background: "#2F5D62" }}>Add</button>
-            <button onClick={() => setShowAddTask(false)} className="px-2 text-gray-400"><Icon.X size={16} /></button>
-          </div>
-        )}
-
-        <div className="space-y-2">
-          {tasks.length === 0 && <p className="text-sm py-2" style={{ color: "#9C9686" }}>Nothing here yet. Add tasks that don't need a fixed time.</p>}
-          {tasks.map((t) => (
-            <div key={t.id} className="flex items-center gap-2.5 p-2.5 rounded-lg border group" style={{ borderColor: "#E7E3DA", background: t.done ? "#F1EFE8" : "white" }}>
-              <button onClick={() => toggleTask(t.id)} className="w-4 h-4 rounded border flex items-center justify-center shrink-0" style={{ borderColor: t.done ? "#2F5D62" : "#D8D2C4", background: t.done ? "#2F5D62" : "transparent" }}>
-                {t.done && <Icon.Check size={11} color="white" />}
-              </button>
-              <span className="text-sm flex-1" style={{ color: t.done ? "#9C9686" : "#23262B", textDecoration: t.done ? "line-through" : "none" }}>{t.text}</span>
-              <button onClick={() => removeTask(t.id)} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-400 transition-opacity"><Icon.Trash /></button>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+  var taskList = document.getElementById("taskList");
+  taskList.innerHTML = "";
+  if (tasks.length === 0) {
+    var ep = document.createElement("p");
+    ep.className = "empty";
+    ep.textContent = "Nothing here yet. Add tasks that don't need a fixed time.";
+    taskList.appendChild(ep);
+  }
+  tasks.forEach(function (t) {
+    var row = document.createElement("div");
+    row.className = "task-row" + (t.done ? " done" : "");
+    row.innerHTML =
+      '<button class="checkbox' + (t.done ? " done" : "") + '" data-tid="' + t.id + '">' + (t.done ? checkWhiteSVG : "") + '</button>' +
+      '<span class="task-text' + (t.done ? " done" : "") + '">' + escapeHTML(t.text) + '</span>' +
+      '<button class="del-btn" data-tdel="' + t.id + '">' + trashSVG + '</button>';
+    taskList.appendChild(row);
+  });
+  taskList.querySelectorAll("[data-tid]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var id = el.getAttribute("data-tid");
+      tasks = tasks.map(function (t) { return t.id === id ? Object.assign({}, t, { done: !t.done }) : t; });
+      persist(); render();
+    });
+  });
+  taskList.querySelectorAll("[data-tdel]").forEach(function (el) {
+    el.addEventListener("click", function () {
+      var id = el.getAttribute("data-tdel");
+      tasks = tasks.filter(function (t) { return t.id !== id; });
+      persist(); render();
+    });
+  });
 }
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<DailySchedule />);
+function escapeHTML(s) {
+  var d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ---------- form wiring ----------
+document.getElementById("toggleAddBlock").addEventListener("click", function () {
+  var f = document.getElementById("addBlockForm");
+  f.style.display = f.style.display === "none" ? "block" : "none";
+});
+document.getElementById("cancelBlock").addEventListener("click", function () {
+  document.getElementById("addBlockForm").style.display = "none";
+});
+document.getElementById("saveBlock").addEventListener("click", function () {
+  var start = document.getElementById("blockStart").value;
+  var end = document.getElementById("blockEnd").value;
+  var label = document.getElementById("blockLabel").value.trim();
+  if (!label) return;
+  routine.push({ id: uid(), start: start, end: end, label: label });
+  document.getElementById("blockLabel").value = "";
+  document.getElementById("addBlockForm").style.display = "none";
+  persist(); render();
+});
+
+document.getElementById("toggleAddTask").addEventListener("click", function () {
+  var f = document.getElementById("addTaskForm");
+  f.style.display = f.style.display === "none" ? "flex" : "none";
+  if (f.style.display === "flex") document.getElementById("taskText").focus();
+});
+function addTask() {
+  var input = document.getElementById("taskText");
+  var text = input.value.trim();
+  if (!text) return;
+  tasks.push({ id: uid(), text: text, done: false });
+  input.value = "";
+  document.getElementById("addTaskForm").style.display = "none";
+  persist(); render();
+}
+document.getElementById("saveTask").addEventListener("click", addTask);
+document.getElementById("taskText").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") addTask();
+});
+
+// ---------- boot ----------
+render();
+setInterval(render, 30000);
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./service-worker.js").catch(function () {});
+}
 </script>
 </body>
 </html>
